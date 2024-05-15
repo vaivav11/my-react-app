@@ -4,7 +4,7 @@ import './App.css';
 const App = () => {
   const [loading, setLoading] = useState(true);
   const [data, setData] = useState([]);
-  const [pageSize, setPageSize] = useState(5);
+  const [pageSize, setPageSize] = useState(10);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalUsers, setTotalUsers] = useState(0);
   const [selectedUser, setSelectedUser] = useState(null);
@@ -16,12 +16,15 @@ const App = () => {
 
   const fetchData = () => {
     setLoading(true);
-    const url = `https://jsonplaceholder.typicode.com/users?_page=${currentPage}&_limit=${pageSize}`;
+    const url = `https://hiring-api.simbuka.workers.dev/?page=${currentPage}&size=${pageSize}`;
 
     fetch(url)
       .then((res) => {
+        if (!res.ok) {
+          throw new Error('Failed to fetch data');
+        }
         const totalCount = res.headers.get('X-Total-Count');
-        setTotalUsers(totalCount || 0);
+        setTotalUsers(parseInt(totalCount, 10) || 0);
         return res.json();
       })
       .then((users) => {
@@ -35,7 +38,10 @@ const App = () => {
   };
 
   const handleNextPage = () => {
-    setCurrentPage((prevPage) => prevPage + 1);
+    const totalPages = Math.ceil(totalUsers / pageSize);
+    if (currentPage < totalPages) {
+      setCurrentPage((prevPage) => prevPage + 1);
+    }
   };
 
   const handlePrevPage = () => {
@@ -43,7 +49,8 @@ const App = () => {
   };
 
   const handlePageSizeChange = (e) => {
-    setPageSize(parseInt(e.target.value, 10));
+    const size = parseInt(e.target.value, 10);
+    setPageSize(size);
     setCurrentPage(1);
   };
 
@@ -66,16 +73,16 @@ const App = () => {
           <table id="users">
             <thead>
               <tr>
-                <th>Name</th>
-                <th>Email</th>
+                <th>First Name</th>
+                <th>Last Name</th>
                 <th></th>
               </tr>
             </thead>
             <tbody>
               {data.map((user) => (
                 <tr key={user.id}>
-                  <td>{user.name}</td>
-                  <td>{user.email}</td>
+                  <td>{user.firstName}</td>
+                  <td>{user.lastName}</td>
                   <td>
                     <button onClick={() => handleClick(user)}>
                       More information
@@ -83,10 +90,11 @@ const App = () => {
                     {selectedUser && selectedUser.id === user.id && (
                       <div className={isButtonShown ? 'show' : ''}>
                         <button onClick={() => handleClick(user)}>X</button>
-                        <p>Street: {user.address.street}</p>
-                        <p>Suite: {user.address.suite}</p>
-                        <p>City: {user.address.city}</p>
-                        <p>Zipcode: {user.address.zipcode}</p>
+                        <p>Identification Number: {user.customerIdentificationCode}</p>
+                        <p>First Name: {user.firstName}</p>
+                        <p>Last Name: {user.lastName}</p>
+                        <p>Birth Date: {user.birthDate}</p>
+                        <p>Gender: {user.gender}</p>
                       </div>
                     )}
                   </td>
@@ -100,14 +108,13 @@ const App = () => {
             </button>
             <button
               onClick={handleNextPage}
-              disabled={data.length === 0 || data.length < pageSize || (currentPage * pageSize) >= totalUsers}
+              disabled={currentPage >= Math.ceil(totalUsers / pageSize)}
             >
               Next
             </button>
             <div>
               <label htmlFor="pageSize">Users per page:</label>
               <select id="pageSize" value={pageSize} onChange={handlePageSizeChange}>
-                <option value="5">5</option>
                 <option value="10">10</option>
                 <option value="15">15</option>
               </select>
